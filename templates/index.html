@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2 class="title">Certificate Generator</h2>
+
+    <form id="form" action="/generate" method="POST" enctype="multipart/form-data">
+        <label>Select Image</label>
+        <input type="file" name="image" id="image" required>
+
+        <label>Enter Text</label>
+        <input type="text" name="text" id="text" placeholder="Your message">
+
+        <label>Font Size (px)</label>
+        <input type="number" name="font_size" id="font_size" min="12" max="300" value="150">
+
+        <label>Max Width (%)</label>
+        <input type="number" name="max_width" id="max_width" min="10" max="100" value="90">
+
+    <label>Vertical Position (%)</label>
+    <input type="number" name="v_position" id="v_position" min="0" max="300" value="25">
+
+        <label>Text Color</label>
+        <input type="color" name="text_color" id="text_color" value="#FFFFFF">
+
+        <label>Output PDF Filename</label>
+        <input type="text" name="pdf_filename" id="pdf_filename" placeholder="output" value="output">
+
+        <div class="preview-box">
+            <canvas id="preview"></canvas>
+        </div>
+
+        <button type="submit">Download PDF</button>
+    </form>
+
+</div>
+
+<script>
+let imageEl = document.getElementById("image");
+let textEl = document.getElementById("text");
+let sizeEl = document.getElementById("font_size");
+let maxWidthEl = document.getElementById("max_width");
+let vPosEl = document.getElementById("v_position");
+let colorEl = document.getElementById("text_color");
+
+let canvas = document.getElementById("preview");
+let ctx = canvas.getContext("2d");
+let img = new Image();
+
+
+function drawTextCentered(ctx, text, fontSize, y, maxWidth) {
+    let words = text.split(' ');
+    let line = '';
+    let lineHeight = fontSize * 1.2;
+    let lines = [];
+
+    for (let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && line) {
+            lines.push(line);
+            line = words[n] + ' ';
+        } else {
+            line = testLine;
+        }
+    }
+    lines.push(line);
+
+ 
+    let startY = y - (lines.length * lineHeight) / 2;
+    lines.forEach((lineText, idx) => {
+        let lineWidth = ctx.measureText(lineText).width;
+        let x = (canvas.width - lineWidth) / 2;
+        ctx.fillText(lineText, x, startY + idx * lineHeight);
+    });
+}
+
+function updatePreview() {
+    if (!img.src) return;
+
+ 
+    const maxPreviewWidth = 500;
+    const maxPreviewHeight = 400;
+
+    let scale = Math.min(maxPreviewWidth / img.width, maxPreviewHeight / img.height, 1);
+
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+
+    let fontSize = parseInt(sizeEl.value);
+    ctx.font = (fontSize * scale) + "px Arial";
+    ctx.fillStyle = colorEl.value;
+    ctx.textBaseline = "top";
+
+    let maxWidthPx = img.width * (parseInt(maxWidthEl.value) / 100) * scale;
+
+   
+    let v_pos = parseInt(vPosEl.value);
+    let posY = img.height * (v_pos / 100) * scale;
+
+    drawTextCentered(ctx, textEl.value, fontSize * scale, posY, maxWidthPx);
+}
+
+
+imageEl.onchange = e => {
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.onload = evt => {
+        img.src = evt.target.result;
+        img.onload = updatePreview;
+    }
+    reader.readAsDataURL(file);
+};
+
+
+textEl.oninput = updatePreview;
+sizeEl.oninput = updatePreview;
+maxWidthEl.oninput = updatePreview;
+vPosEl.oninput = updatePreview;
+colorEl.oninput = updatePreview;
+</script>
+
+</body>
+</html>
